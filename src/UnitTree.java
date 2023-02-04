@@ -16,6 +16,8 @@ public class UnitTree {
         //The unitID of the root
         String unitID = scanner.nextLine().trim();
 
+        Map<String, Element> units = new HashMap<>();
+
         //The java DOM parser provides the classes to read and write an XML file.
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 
@@ -28,10 +30,52 @@ public class UnitTree {
             Document document = builder.parse("content.xml");
             document.getDocumentElement().normalize();
 
-            printUnitTree(unitID, document, visited, level);
+            addUnitsToMap(document, units);
+            printRequirements(unitID,  visited,  level , units);
+
+            //printUnitTree(unitID, document, visited, level);
 
         } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void printRequirements(String unitID, Set<String> visited, int level, Map<String, Element> units) {
+        if (units.containsKey(unitID)) {
+            for (int itr = 0; itr < level; itr++) {
+                System.out.print("--");
+            }
+            System.out.println(unitID);
+            visited.add(unitID);
+
+            Element eElement = units.get(unitID);
+            for (int j = 0; j < eElement.getElementsByTagName("required").getLength(); j++) {
+                String requirement = (eElement.getElementsByTagName("required").item(j).getAttributes().getNamedItem("name").getNodeValue());
+                String requirementNamespace = (eElement.getElementsByTagName("required").item(j).getAttributes().getNamedItem("namespace").getNodeValue());
+
+                if (!visited.contains(requirement) && !requirement.equals(unitID) && (requirementNamespace.equals("org.eclipse.equinox.p2.iu") || requirementNamespace.equals("osgi.bundle"))) {
+                    printRequirements(requirement, visited, level + 1 , units);
+                }
+            }
+        }
+    }
+
+
+
+
+    private static void addUnitsToMap(Document document, Map<String, Element> unit) {
+        NodeList list = document.getElementsByTagName("unit");
+
+        for (int i = 0; i < list.getLength(); i++) {
+            Node currentItem = list.item(i);
+            String unitId = list.item(i).getAttributes().getNamedItem("id").getNodeValue();
+            if (currentItem.getNodeType() == Node.ELEMENT_NODE) {
+
+                List<String> requirements = new ArrayList<>();
+                Element eElement = (Element) currentItem;
+
+                unit.put(unitId,eElement);
+            }
         }
     }
 
@@ -46,7 +90,7 @@ public class UnitTree {
             //This condition checks if the given id matches the unitID.
             if (currentItem.getNodeType() == Node.ELEMENT_NODE && list.item(i).getAttributes().getNamedItem("id").getNodeValue().equals(NodeID)) {
                 //This loop prints a different output depending on the level the requirement is at.
-                for(int itr = 0; itr < level; itr++){
+                for (int itr = 0; itr < level; itr++) {
                     System.out.print("--");
                 }
                 System.out.println(NodeID);
